@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<title>ASM Dashboard</title>
+<style>
+    :root[data-theme="dark"] {
+        --bg: #0f1115;
+        --bg-card: #1a1d24;
+        --text: #e4e6eb;
+        --text-muted: #9199a3;
+        --border: #2a2e37;
+        --accent: #4f8cff;
+        --accent-hover: #6ba1ff;
+        --danger: #e05252;
+        --input-bg: #14161c;
+    }
+    :root[data-theme="light"] {
+        --bg: #f5f6f8;
+        --bg-card: #ffffff;
+        --text: #1a1d24;
+        --text-muted: #5a616e;
+        --border: #dde1e6;
+        --accent: #2563eb;
+        --accent-hover: #1d4ed8;
+        --danger: #dc2626;
+        --input-bg: #f0f1f3;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+        margin: 0;
+        font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+        background-color: var(--bg);
+        color: var(--text);
+        transition: background-color 0.2s, color 0.2s;
+        font-size: 16px;
+    }
+
+    .container {
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+    padding: 24px 30px 60px;
+    align-content: center;
+}
+
+    header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 24px;
+    }
+
+    h1 {
+        font-size: 26px;
+        margin: 0;
+    }
+
+    .theme-toggle {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        color: var(--text);
+        border-radius: 6px;
+        padding: 8px 12px;
+        cursor: pointer;
+        font-size: 14px;
+    }
+
+    .card {
+        background-color: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+
+    .card h2 {
+        font-size: 18px;
+        margin: 0 0 14px;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+    }
+
+    .scan-form {
+        display: flex;
+        gap: 10px;
+    }
+
+    input[type="text"] {
+        flex: 1;
+        background-color: var(--input-bg);
+        border: 1px solid var(--border);
+        color: var(--text);
+        border-radius: 6px;
+        padding: 12px 14px;
+        font-size: 16px;
+    }
+
+    button {
+        background-color: var(--accent);
+        color: white;
+        border: none;
+        border-radius: 6px;
+        padding: 12px 18px;
+        font-size: 16px;
+        cursor: pointer;
+    }
+    button:hover { background-color: var(--accent-hover); }
+    button.secondary {
+        background-color: transparent;
+        border: 1px solid var(--border);
+        color: var(--text);
+    }
+    button.danger {
+        background-color: transparent;
+        border: 1px solid var(--danger);
+        color: var(--danger);
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 16px;
+    }
+    th, td {
+        text-align: left;
+        padding: 10px 12px;
+        border-bottom: 1px solid var(--border);
+    }
+    th { color: var(--text-muted); font-weight: 600; }
+
+    .status-badge {
+        display: inline-block;
+        padding: 3px 10px;
+        border-radius: 10px;
+        font-size: 13px;
+        font-weight: 600;
+    }
+    .status-termine { background-color: #1e7e34; color: white; }
+    .status-encours { background-color: #b58900; color: white; }
+    .status-erreur { background-color: #b91c1c; color: white; }
+
+    .actions { display: flex; gap: 6px; flex-wrap: wrap; }
+    .actions a, .actions button { font-size: 14px; padding: 7px 12px; text-decoration: none; }
+
+    #results-panel { display: none; }
+    #results-panel.open { display: block; }
+
+    .asset-row, .vuln-row { font-size: 14px; }
+
+    .sev { padding: 3px 8px; border-radius: 3px; font-size: 13px; font-weight: 700; color: white; }
+    .sev-critical { background: #7a0d0d; }
+    .sev-high { background: #c0392b; }
+    .sev-medium { background: #d68910; }
+    .sev-low { background: #2874a6; }
+    .sev-info { background: #6b7280; }
+
+    .empty { color: var(--text-muted); font-style: italic; font-size: 15px; }
+    .loading { color: var(--text-muted); font-size: 15px; }
+</style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>ASM Dashboard</h1>
+        <button class="theme-toggle" id="themeToggle">🌙 / ☀️</button>
+    </header>
+
+    <div class="card">
+        <h2>Lancer un scan</h2>
+        <div class="scan-form">
+            <input type="text" id="domainInput" placeholder="ex: nmap.org" />
+            <button id="launchBtn">Lancer</button>
+        </div>
+        <p id="launchMessage" class="loading" style="margin-top:10px; display:none;"></p>
+    </div>
+
+    <div class="card">
+        <h2>Historique des scans</h2>
+        <div id="scansTableContainer">
+            <p style="font-size:12px; color:var(--text-muted); margin:0 0 10px;">
+                Un scan en cours se met à jour automatiquement ci-dessous (toutes les 3 secondes) — inutile de rafraîchir la page manuellement.
+            </p>
+            <p class="loading">Chargement...</p>
+        </div>
+    </div>
+
+    <div class="card" id="results-panel">
+        <h2 id="resultsTitle">Résultats</h2>
+        <div id="resultsContent"></div>
+    </div>
+</div>
+
+<script>
+const API_BASE = "";  // même origine que le dashboard, pas besoin d'URL absolue
+
+// --- Gestion du thème clair/sombre ---
+const themeToggle = document.getElementById("themeToggle");
+const savedTheme = localStorage.getItem("asm-theme") || "dark";
+document.documentElement.setAttribute("data-theme", savedTheme);
+
+themeToggle.addEventListener("click", () => {
+    const current = document.documentElement.getAttribute("data-theme");
+    const next = current === "dark" ? "light" : "dark";
+    document.documentElement.setAttribute("data-theme", next);
+    localStorage.setItem("asm-theme", next);
+});
+
+// --- Lancement d'un scan ---
+const launchBtn = document.getElementById("launchBtn");
+const domainInput = document.getElementById("domainInput");
+const launchMessage = document.getElementById("launchMessage");
+
+launchBtn.addEventListener("click", async () => {
+    const domain = domainInput.value.trim();
+    if (!domain) return;
+
+    launchMessage.style.display = "block";
+    launchMessage.textContent = "Lancement du scan...";
+
+    try {
+        const res = await fetch(`${API_BASE}/api/scan`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ domain })
+        });
+        const data = await res.json();
+        launchMessage.textContent = `${data.message} pour ${data.domain}. Il tourne en arrière-plan — actualisez la liste ci-dessous dans quelques instants.`;
+        domainInput.value = "";
+        setTimeout(loadScans, 2000);
+    } catch (err) {
+        launchMessage.textContent = "Erreur lors du lancement du scan.";
+    }
+});
+
+// --- Chargement de la liste des scans ---
+let autoRefreshInterval = null;
+
+async function loadScans() {
+    const container = document.getElementById("scansTableContainer");
+    const isFirstLoad = container.innerHTML.includes("Chargement");
+    if (isFirstLoad) container.innerHTML = '<p class="loading">Chargement...</p>';
+
+    try {
+        const res = await fetch(`${API_BASE}/api/scans`);
+        const scans = await res.json();
+
+        if (scans.length === 0) {
+            container.innerHTML = '<p class="empty">Aucun scan pour le moment.</p>';
+            stopAutoRefresh();
+            return;
+        }
+
+        const statusClass = (statut) => {
+            if (statut === "Terminé") return "status-termine";
+            if (statut === "En cours") return "status-encours";
+            return "status-erreur";
+        };
+
+        let html = `<table><tr><th>ID</th><th>Domaine</th><th>Date</th><th>Statut</th><th>Progression</th><th>Actions</th></tr>`;
+        let hasRunningScan = false;
+
+        for (const scan of scans) {
+            if (scan.statut === "En cours") hasRunningScan = true;
+
+            let progressCell = "-";
+            if (scan.statut === "En cours") {
+                const pct = scan.total_sous_domaines > 0
+                    ? Math.round((scan.sous_domaines_faits / scan.total_sous_domaines) * 100)
+                    : 0;
+                progressCell = `
+                    <div style="min-width:140px;">
+                        <div style="background:var(--input-bg); border-radius:4px; height:8px; overflow:hidden;">
+                            <div style="background:var(--accent); height:100%; width:${pct}%; transition:width 0.5s;"></div>
+                        </div>
+                        <div style="font-size:11px; color:var(--text-muted); margin-top:3px;">
+                            ${scan.sous_domaines_faits}/${scan.total_sous_domaines} — ${scan.etape_actuelle || "..."}
+                        </div>
+                    </div>`;
+            }
+
+            html += `
+                <tr>
+                    <td>#${scan.id}</td>
+                    <td>${scan.domaine_cible}</td>
+                    <td>${scan.date_debut}</td>
+                    <td><span class="status-badge ${statusClass(scan.statut)}">${scan.statut}</span></td>
+                    <td>${progressCell}</td>
+                    <td class="actions">
+                        <button class="secondary" onclick="viewResults(${scan.id})">Voir</button>
+                        <a href="/api/scan/${scan.id}/report.html" target="_blank"><button class="secondary">Rapport HTML</button></a>
+                        <a href="/api/scan/${scan.id}/report.pdf"><button class="secondary">PDF</button></a>
+                        <button class="danger" onclick="deleteScan(${scan.id})">Supprimer</button>
+                    </td>
+                </tr>`;
+        }
+        html += `</table>`;
+        container.innerHTML = html;
+
+        // La page se met à jour toute seule tant qu'un scan tourne encore —
+        // pas besoin d'appuyer sur F5.
+        if (hasRunningScan) {
+            startAutoRefresh();
+        } else {
+            stopAutoRefresh();
+        }
+
+    } catch (err) {
+        container.innerHTML = '<p class="empty">Erreur lors du chargement des scans.</p>';
+    }
+}
+
+function startAutoRefresh() {
+    if (autoRefreshInterval) return;  // déjà actif, ne pas dupliquer
+    autoRefreshInterval = setInterval(loadScans, 3000);
+}
+
+function stopAutoRefresh() {
+    if (autoRefreshInterval) {
+        clearInterval(autoRefreshInterval);
+        autoRefreshInterval = null;
+    }
+}
+
+// --- Affichage détaillé d'un scan ---
+async function viewResults(scanId) {
+    const panel = document.getElementById("results-panel");
+    const title = document.getElementById("resultsTitle");
+    const content = document.getElementById("resultsContent");
+
+    panel.classList.add("open");
+    title.textContent = `Résultats du scan #${scanId}`;
+    content.innerHTML = '<p class="loading">Chargement...</p>';
+    panel.scrollIntoView({ behavior: "smooth" });
+
+    try {
+        const res = await fetch(`${API_BASE}/api/scan/${scanId}/results`);
+        if (!res.ok) {
+            content.innerHTML = '<p class="empty">Scan introuvable.</p>';
+            return;
+        }
+        const data = await res.json();
+
+        let html = `<p><strong>Domaine :</strong> ${data.scan.domaine_cible} — <strong>Statut :</strong> ${data.scan.statut}</p>`;
+
+        html += `<h3 style="font-size:14px;">Assets (${data.assets.length})</h3>`;
+        if (data.assets.length === 0) {
+            html += '<p class="empty">Aucun asset.</p>';
+        } else {
+            html += `<table><tr><th>Sous-domaine</th><th>IP</th><th>Ports</th><th>Technologies</th></tr>`;
+            for (const a of data.assets) {
+                html += `<tr class="asset-row">
+                    <td>${a.sous_domaine}</td>
+                    <td>${a.adresse_ip || "N/A"}</td>
+                    <td>${a.ports_ouverts || "-"}</td>
+                    <td>${a.technologies || "-"}</td>
+                </tr>`;
+            }
+            html += `</table>`;
+        }
+
+        html += `<h3 style="font-size:14px; margin-top:16px;">Vulnérabilités (${data.vulnerabilities.length})</h3>`;
+        if (data.vulnerabilities.length === 0) {
+            html += '<p class="empty">Aucune vulnérabilité.</p>';
+        } else {
+            html += `<table><tr><th>Sévérité</th><th>Titre</th><th>Description</th></tr>`;
+            for (const v of data.vulnerabilities) {
+                const sevClass = "sev-" + v.severite.toLowerCase();
+                html += `<tr class="vuln-row">
+                    <td><span class="sev ${sevClass}">${v.severite}</span></td>
+                    <td>${v.titre_cve}</td>
+                    <td>${v.description || "-"}</td>
+                </tr>`;
+            }
+            html += `</table>`;
+        }
+
+        content.innerHTML = html;
+
+    } catch (err) {
+        content.innerHTML = '<p class="empty">Erreur lors du chargement des résultats.</p>';
+    }
+}
+
+// --- Suppression d'un scan ---
+async function deleteScan(scanId) {
+    if (!confirm(`Supprimer le scan #${scanId} et toutes ses données associées ?`)) return;
+
+    try {
+        await fetch(`${API_BASE}/api/scan/${scanId}`, { method: "DELETE" });
+        loadScans();
+        document.getElementById("results-panel").classList.remove("open");
+    } catch (err) {
+        alert("Erreur lors de la suppression.");
+    }
+}
+
+// --- Chargement initial ---
+loadScans();
+</script>
+
+</body>
+</html>

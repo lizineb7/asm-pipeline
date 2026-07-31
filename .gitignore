@@ -1,0 +1,22 @@
+# Environnement virtuel
+venv/
+
+#env
+.env
+
+# Base de données locale 
+asm_pipeline.db
+
+# Outils externes 
+tools/*.exe
+
+# Fichiers de test générés
+test_report.html
+test_report.pdf
+
+# Cache Python
+__pycache__/
+*.pyc
+
+# VSCode
+.vscode/

@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<style>
+    
+    @page {
+        size: a4 portrait;
+        margin-top: 2cm;
+        margin-bottom: 2.2cm;
+        margin-left: 1.5cm;
+        margin-right: 1.5cm;
+
+        @frame footer_frame {
+            -pdf-frame-content: footerContent;
+            bottom: 1cm;
+            margin-left: 1cm;
+            margin-right: 1cm;
+            height: 1cm;
+        }
+    }
+
+    body {
+        font-family: Helvetica, Arial, sans-serif;
+        font-size: 12px;
+        color: #1a1a1a;
+    }
+    h1 {
+        color: #1a2b4c;
+        border-bottom: 3px solid #1a2b4c;
+        padding-bottom: 8px;
+    }
+    h2 {
+        color: #1a2b4c;
+        margin-top: 30px;
+        border-bottom: 1px solid #ccc;
+        padding-bottom: 4px;
+    }
+    .meta {
+        background-color: #f0f2f5;
+        padding: 12px;
+        border-radius: 4px;
+        margin-bottom: 20px;
+    }
+    .meta p { margin: 4px 0; }
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 10px;
+    }
+    th, td {
+        border: 1px solid #ddd;
+        padding: 6px 8px;
+        text-align: left;
+        font-size: 11px;
+    }
+    th {
+        background-color: #1a2b4c;
+        color: white;
+    }
+    tr:nth-child(even) { background-color: #f9f9f9; }
+    .sev-critical { color: #fff; background-color: #7a0d0d; font-weight: bold; padding: 2px 6px; border-radius: 3px; }
+    .sev-high { color: #fff; background-color: #c0392b; font-weight: bold; padding: 2px 6px; border-radius: 3px; }
+    .sev-medium { color: #fff; background-color: #d68910; font-weight: bold; padding: 2px 6px; border-radius: 3px; }
+    .sev-low { color: #fff; background-color: #2874a6; font-weight: bold; padding: 2px 6px; border-radius: 3px; }
+    .sev-info { color: #333; background-color: #d5d8dc; font-weight: bold; padding: 2px 6px; border-radius: 3px; }
+    .summary-box {
+        display: block;
+        margin: 15px 0;
+    }
+    .summary-item {
+        display: inline-block;
+        margin-right: 15px;
+        padding: 8px 14px;
+        border-radius: 4px;
+        background-color: #f0f2f5;
+    }
+    .empty-state {
+        color: #888;
+        font-style: italic;
+        margin: 10px 0;
+    }
+    .legend-box {
+        background-color: #fafafa;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        padding: 12px 16px;
+        margin: 15px 0;
+    }
+    .legend-box p {
+        margin: 6px 0;
+    }
+    .count-badge {
+        display: inline-block;
+        background-color: #ddd;
+        color: #333;
+        border-radius: 10px;
+        padding: 1px 8px;
+        font-size: 10px;
+        font-weight: bold;
+        margin-left: 6px;
+    }
+    #footerContent {
+        text-align: center;
+        font-size: 9px;
+        color: #888;
+    }
+</style>
+</head>
+<body>
+
+    <h1>Rapport ASM — {{ scan.domaine_cible }}</h1>
+
+    <div class="meta">
+        <p><strong>Domaine cible :</strong> {{ scan.domaine_cible }}</p>
+        <p><strong>Date du scan :</strong> {{ scan.date_debut }}</p>
+        <p><strong>Statut :</strong> {{ scan.statut }}</p>
+        <p><strong>ID du scan :</strong> #{{ scan.id }}</p>
+    </div>
+
+    <div class="summary-box">
+        <span class="summary-item"><strong>{{ assets|length }}</strong> asset(s) découvert(s)</span>
+        <span class="summary-item"><strong>{{ total_findings_raw }}</strong> finding(s) au total ({{ vulnerabilities|length }} unique(s))</span>
+        <span class="summary-item"><strong>{{ severity_counts.get('Critical', 0) + severity_counts.get('High', 0) }}</strong> finding(s) critique/élevé</span>
+    </div>
+
+    <h2>Résumé des sévérités</h2>
+    <div class="summary-box">
+        {% for sev in ['Critical', 'High', 'Medium', 'Low', 'Info'] %}
+        <span class="summary-item">
+            <span class="sev-{{ sev|lower }}">{{ sev }}</span> : {{ severity_counts.get(sev, 0) }}
+        </span>
+        {% endfor %}
+    </div>
+
+    <h2>Guide de lecture des sévérités</h2>
+    <div class="legend-box">
+        <p><span class="sev-critical">Critical</span> — Faille exploitable immédiatement, impact majeur (accès complet, fuite massive de données). À corriger en priorité absolue.</p>
+        <p><span class="sev-high">High</span> — Vulnérabilité sérieuse pouvant mener à une compromission significative (accès à des données sensibles, fichiers exposés). À corriger rapidement.</p>
+        <p><span class="sev-medium">Medium</span> — Faille modérée, généralement exploitable sous certaines conditions ou en complément d'une autre faille. À planifier.</p>
+        <p><span class="sev-low">Low</span> — Impact limité, souvent une mauvaise pratique plutôt qu'une faille directement exploitable.</p>
+        <p><span class="sev-info">Info</span> — Information de contexte (technologie détectée, configuration observée), sans impact de sécurité direct par elle-même.</p>
+    </div>
+
+    <h2>Assets découverts ({{ assets|length }})</h2>
+    {% if assets %}
+    <table>
+        <tr>
+            <th>Sous-domaine</th>
+            <th>Adresse IP</th>
+            <th>Ports ouverts</th>
+            <th>Technologies</th>
+        </tr>
+        {% for asset in assets %}
+        <tr>
+            <td>{{ asset.sous_domaine }}</td>
+            <td>{{ asset.adresse_ip or "N/A" }}</td>
+            <td>{{ asset.ports_ouverts or "-" }}</td>
+            <td>{{ asset.technologies or "-" }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+    {% else %}
+    <p class="empty-state">Aucun asset découvert pour ce scan.</p>
+    {% endif %}
+
+    <h2>Vulnérabilités détectées ({{ vulnerabilities|length }} unique(s), {{ total_findings_raw }} au total, triées par sévérité)</h2>
+    {% if vulnerabilities %}
+    <table>
+        <tr>
+            <th>Sévérité</th>
+            <th>Titre</th>
+            <th>Asset concerné</th>
+            <th>Description</th>
+        </tr>
+        {% for vuln in vulnerabilities %}
+        <tr>
+            <td><span class="sev-{{ vuln.severite|lower }}">{{ vuln.severite }}</span></td>
+            <td>
+                {{ vuln.titre_cve }}
+                {% if vuln.count > 1 %}<span class="count-badge">×{{ vuln.count }}</span>{% endif %}
+            </td>
+            <td>{{ asset_lookup.get(vuln.asset_id, "N/A") }}</td>
+            <td>{{ vuln.description or "-" }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+    {% else %}
+    <p class="empty-state">Aucune vulnérabilité détectée pour ce scan.</p>
+    {% endif %}
+
+    <!-- Pied de page répété sur chaque page du PDF (ignoré par les navigateurs) -->
+    <div id="footerContent">
+        Page <pdf:pagenumber /> / <pdf:pagecount /> — Rapport ASM généré automatiquement
+    </div>
+
+</body>
+</html>
