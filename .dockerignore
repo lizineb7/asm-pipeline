@@ -1,0 +1,13 @@
+venv/
+.env
+asm_pipeline.db
+.git/
+__pycache__/
+*.pyc
+tools/*.exe
+test_report.html
+test_report.pdf
+*.aux
+*.log
+*.toc
+rapport_asm.pdf
