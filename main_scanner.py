@@ -71,7 +71,7 @@ def extract_ports_and_technologies(shodan_data: dict[str, Any]) -> tuple[list[in
     return ports, technologies
 
 
-def run_pipeline(root_domain: str, shodan_delay: float = 1.5) -> None:
+def run_pipeline(root_domain: str, shodan_delay: float = 1.5, session_id: str = "") -> None:
     """
     Enchaîne Subfinder -> résolution DNS -> Shodan -> stockage SQLite
     pour un domaine racine donné.
@@ -83,7 +83,7 @@ def run_pipeline(root_domain: str, shodan_delay: float = 1.5) -> None:
     """
 
     # --- Création de l'entrée de scan en base, statut initial "En cours" ---
-    scan_id: int = database.create_scan(root_domain)
+    scan_id: int = database.create_scan(root_domain, session_id)
     print(f"[INFO] Scan créé en base avec l'id {scan_id} (domaine : {root_domain})")
 
     try:

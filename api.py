@@ -13,6 +13,9 @@ Documentation interactive générée automatiquement, une fois le serveur lancé
 import sqlite3
 from typing import Any, Optional
 
+import uuid
+from fastapi import Request, Response
+
 from fastapi import FastAPI, BackgroundTasks, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -113,25 +116,31 @@ def row_to_dict(row: sqlite3.Row) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 @app.post("/api/scan", response_model=ScanStartedResponse)
-def start_scan(scan_request: ScanRequest, background_tasks: BackgroundTasks) -> ScanStartedResponse:
-    """
-    Démarre un nouveau scan pour le domaine fourni.
-
-    Le scan tourne en arrière-plan via BackgroundTasks : la requête HTTP
-    répond immédiatement, sans attendre que Subfinder/Shodan aient fini
-    (ce qui peut prendre du temps). Le client consultera l'avancement
-    ensuite via GET /api/scans ou GET /api/scan/{id}/results.
-    """
+def start_scan(
+    scan_request: ScanRequest,
+    background_tasks: BackgroundTasks,
+    request: Request,
+    response: Response,
+) -> ScanStartedResponse:
     domain: str = scan_request.domain.strip()
 
     if not domain:
-        # 400 Bad Request : la requête elle-même est invalide
         raise HTTPException(status_code=400, detail="Le champ 'domain' ne peut pas être vide.")
 
-    # On planifie l'exécution de run_pipeline() APRÈS l'envoi de la réponse HTTP.
-    # C'est ça qui empêche le client de rester bloqué en attente pendant
-    # tout le scan (qui peut durer plusieurs dizaines de secondes/minutes).
-    background_tasks.add_task(run_pipeline, domain)
+    # Récupère le cookie de session existant, ou en crée un nouveau
+    # (première visite de ce navigateur).
+    session_id = request.cookies.get("asm_session")
+    if not session_id:
+        session_id = str(uuid.uuid4())
+        response.set_cookie(
+            key="asm_session",
+            value=session_id,
+            max_age=60 * 60 * 24 * 30,  # 30 jours
+            httponly=True,
+            samesite="lax",
+        )
+
+    background_tasks.add_task(run_pipeline, domain, 1.5, session_id)
 
     return ScanStartedResponse(message="Scan démarré", domain=domain)
 
@@ -141,22 +150,23 @@ def start_scan(scan_request: ScanRequest, background_tasks: BackgroundTasks) -> 
 # ---------------------------------------------------------------------------
 
 @app.get("/api/scans", response_model=list[ScanSummary])
-def list_scans() -> list[dict[str, Any]]:
-    """
-    Retourne la liste complète des scans enregistrés, du plus récent
-    au plus ancien.
-    """
-    conn = database.get_connection()
-    conn.row_factory = sqlite3.Row  # permet d'accéder aux colonnes par nom
-    cursor = conn.cursor()
+def list_scans(request: Request, response: Response) -> list[dict[str, Any]]:
+    session_id = request.cookies.get("asm_session")
 
-    cursor.execute(
-        "SELECT id, domaine_cible, date_debut, statut, total_sous_domaines, sous_domaines_faits, etape_actuelle FROM scans ORDER BY id DESC;"
-    )
-    rows = cursor.fetchall()
-    conn.close()
+    if not session_id:
+        # Pas encore de cookie : ce navigateur n'a jamais lancé de scan,
+        # on lui en crée un et on retourne une liste vide.
+        session_id = str(uuid.uuid4())
+        response.set_cookie(
+            key="asm_session",
+            value=session_id,
+            max_age=60 * 60 * 24 * 30,
+            httponly=True,
+            samesite="lax",
+        )
+        return []
 
-    return [row_to_dict(row) for row in rows]
+    return database.list_scans_by_session(session_id)
 
 
 # ---------------------------------------------------------------------------

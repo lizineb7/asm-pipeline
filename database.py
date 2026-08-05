@@ -55,6 +55,7 @@ def init_db() -> None:
             total_sous_domaines INTEGER DEFAULT 0,
             sous_domaines_faits INTEGER DEFAULT 0,
             etape_actuelle      TEXT DEFAULT ''
+            session_id          TEXT DEFAULT ''
         );
     """)
 
@@ -65,6 +66,7 @@ def init_db() -> None:
         "ALTER TABLE scans ADD COLUMN total_sous_domaines INTEGER DEFAULT 0;",
         "ALTER TABLE scans ADD COLUMN sous_domaines_faits INTEGER DEFAULT 0;",
         "ALTER TABLE scans ADD COLUMN etape_actuelle TEXT DEFAULT '';",
+        "ALTER TABLE scans ADD COLUMN session_id TEXT DEFAULT '';",
     ]:
         try:
             cursor.execute(column_def)
@@ -104,33 +106,42 @@ def init_db() -> None:
 # Fonctions helper : scans
 # ---------------------------------------------------------------------------
 
-def create_scan(domaine_cible: str) -> int:
-    """
-    Crée une nouvelle entrée de scan avec le statut 'En cours'.
-
-    Args:
-        domaine_cible: Le domaine racine scanné (ex: "example.com").
-
-    Returns:
-        L'id (int) du scan nouvellement créé, à réutiliser pour lier
-        les assets qui en découlent.
-    """
+def create_scan(domaine_cible: str, session_id: str = "") -> int:
     conn = get_connection()
     cursor = conn.cursor()
 
     date_debut: str = datetime.now().isoformat(timespec="seconds")
 
     cursor.execute(
-        "INSERT INTO scans (domaine_cible, date_debut, statut) VALUES (?, ?, ?);",
-        (domaine_cible, date_debut, "En cours"),
+        "INSERT INTO scans (domaine_cible, date_debut, statut, session_id) VALUES (?, ?, ?, ?);",
+        (domaine_cible, date_debut, "En cours", session_id),
     )
 
-    scan_id: int = cursor.lastrowid  # id auto-généré par SQLite pour la ligne insérée
-
+    scan_id: int = cursor.lastrowid
     conn.commit()
     conn.close()
-
     return scan_id
+
+
+"""fonction pour lister les scans filtrés par session"""
+def list_scans_by_session(session_id: str) -> list[dict[str, Any]]:
+    conn = get_connection()
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    cursor.execute(
+        """
+        SELECT id, domaine_cible, date_debut, statut, total_sous_domaines,
+               sous_domaines_faits, etape_actuelle
+        FROM scans
+        WHERE session_id = ?
+        ORDER BY id DESC;
+        """,
+        (session_id,),
+    )
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(row) for row in rows]
 
 
 def update_scan_status(scan_id: int, statut: str) -> None:
