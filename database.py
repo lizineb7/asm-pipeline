@@ -54,7 +54,7 @@ def init_db() -> None:
             statut              TEXT NOT NULL CHECK (statut IN ('En cours', 'Terminé', 'Erreur')),
             total_sous_domaines INTEGER DEFAULT 0,
             sous_domaines_faits INTEGER DEFAULT 0,
-            etape_actuelle      TEXT DEFAULT ''
+            etape_actuelle      TEXT DEFAULT '',
             session_id          TEXT DEFAULT ''
         );
     """)
