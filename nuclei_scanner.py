@@ -14,8 +14,25 @@ from pathlib import Path
 from typing import Any
 
 
+import shutil
+import platform
+
 BASE_DIR: Path = Path(__file__).resolve().parent
-NUCLEI_PATH: Path = BASE_DIR / "tools" / "nuclei.exe"
+
+def _find_nuclei() -> Path:
+    """
+    Cherche l'exécutable nuclei : d'abord dans le PATH système (cas
+    du déploiement Linux/Docker, où l'outil est installé globalement),
+    sinon dans tools/ (cas du développement local Windows).
+    """
+    system_path = shutil.which("nuclei")
+    if system_path:
+        return Path(system_path)
+
+    exe_name = "nuclei.exe" if platform.system() == "Windows" else "nuclei"
+    return BASE_DIR / "tools" / exe_name
+
+NUCLEI_PATH: Path = _find_nuclei()
 
 # Correspondance entre les sévérités renvoyées par Nuclei (minuscules) et
 # les valeurs acceptées par la contrainte CHECK de la table vulnerabilities.

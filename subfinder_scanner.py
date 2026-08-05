@@ -15,8 +15,25 @@ from pathlib import Path
 # ---------------------------------------------------------------------------
 
 
+import shutil
+import platform
+
 BASE_DIR: Path = Path(__file__).resolve().parent
-SUBFINDER_PATH: Path = BASE_DIR / "tools" / "subfinder.exe"
+
+def _find_subfinder() -> Path:
+    """
+    Cherche l'exécutable Subfinder : d'abord dans le PATH système (cas
+    du déploiement Linux/Docker, où l'outil est installé globalement),
+    sinon dans tools/ (cas du développement local Windows).
+    """
+    system_path = shutil.which("subfinder")
+    if system_path:
+        return Path(system_path)
+
+    exe_name = "subfinder.exe" if platform.system() == "Windows" else "subfinder"
+    return BASE_DIR / "tools" / exe_name
+
+SUBFINDER_PATH: Path = _find_subfinder()
 
 
 def run_subfinder(domain: str, timeout: int = 60) -> list[str]:
