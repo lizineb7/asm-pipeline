@@ -86,10 +86,10 @@ def run_nuclei(target_url: str, timeout: int = 450) -> list[dict[str, Any]]:
         "-no-color",
         "-severity", "info,low,medium,high,critical",  
         "-timeout", "5",
-        "-rate-limit", "50", 
+        "-rate-limit", "10", 
         "-ni",     
-        "-bulk-size", "10",      
-        "-concurrency", "10",          
+        "-bulk-size", "2",      
+        "-concurrency", "3",          
     ]
 
     start_time = time.time()
