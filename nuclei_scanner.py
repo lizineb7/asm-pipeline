@@ -75,6 +75,8 @@ def run_nuclei(target_url: str, timeout: int = 450) -> list[dict[str, Any]]:
     # -no-color     : évite les codes couleur ANSI qui polluent le JSON
     #"-rate-limit"  : limite le nombre de requêtes/seconde envoyées, pour éviter de déclencher un blocage côté serveur
     #"-ni"          : désactive les templates nécessitant un serveur externe (interactsh/OAST)
+    # "-bulk-size", "10",       # nombre d'hôtes traités en parallèle (par défaut plus élevé)
+    # "-concurrency", "10",     # nombre de templates exécutés en parallèle    
 
     command: list[str] = [
         str(NUCLEI_PATH),
@@ -85,7 +87,9 @@ def run_nuclei(target_url: str, timeout: int = 450) -> list[dict[str, Any]]:
         "-severity", "info,low,medium,high,critical",  
         "-timeout", "5",
         "-rate-limit", "50", 
-        "-ni",               
+        "-ni",     
+        "-bulk-size", "10",      
+        "-concurrency", "10",          
     ]
 
     start_time = time.time()
