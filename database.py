@@ -11,6 +11,7 @@ Utilise uniquement le module standard sqlite3 (pas d'ORM).
 import sqlite3
 from typing import Any, Optional
 from datetime import datetime
+from zoneinfo import ZoneInfo
 from pathlib import Path
 from typing import Optional
 
@@ -110,7 +111,8 @@ def create_scan(domaine_cible: str, session_id: str = "") -> int:
     conn = get_connection()
     cursor = conn.cursor()
 
-    date_debut: str = datetime.now().isoformat(timespec="seconds")
+    LOCAL_TIMEZONE = ZoneInfo("Africa/Casablanca")  
+    date_debut: str = datetime.now(LOCAL_TIMEZONE).isoformat(timespec="seconds")
 
     cursor.execute(
         "INSERT INTO scans (domaine_cible, date_debut, statut, session_id) VALUES (?, ?, ?, ?);",
