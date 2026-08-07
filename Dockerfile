@@ -33,3 +33,6 @@ COPY . .
 
 # Commande exécutée au démarrage du conteneur
 CMD ["uvicorn", "api:app", "--host", "0.0.0.0", "--port", "8000"]
+
+# Télécharge les templates de base lors de la création de l'image
+RUN nuclei -update-templates

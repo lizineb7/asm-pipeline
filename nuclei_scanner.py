@@ -87,13 +87,14 @@ def run_nuclei(target_url: str, timeout: int = 450) -> list[dict[str, Any]]:
         "-no-color",
         "-severity", "info,low,medium,high,critical",  
         "-timeout", "5",
-        "-rate-limit", "5", 
+        "-rate-limit", "15", 
         "-ni",     
         "-bulk-size", "1",      
-        "-concurrency", "1",
+        "-concurrency", "3",
         "-disable-clustering", # Empêche le regroupement lourd de requêtes en mémoire
         "-duc",
         "-tags", "cve,misconfig,exposure,tech", # <--- Limite drastiquement les templates chargés
+        "-as",
     ]
 
     start_time = time.time()
