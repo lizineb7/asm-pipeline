@@ -131,6 +131,7 @@ def run_nuclei(target_url: str, timeout: int = 450) -> list[dict[str, Any]]:
     if result.stderr and result.stderr.strip():
         print(f"  [DEBUG NUCLEI] stderr : {result.stderr.strip()[:300]}")
 
+    print(f"[DEBUG NUCLEI] Scan terminé pour {target_url}. Lignes JSON récupérées : {len(result.stdout.splitlines())}")
 
     findings: list[dict[str, Any]] = []
 
