@@ -93,8 +93,7 @@ def run_nuclei(target_url: str, timeout: int = 450) -> list[dict[str, Any]]:
         "-concurrency", "3",
         "-disable-clustering", # Empêche le regroupement lourd de requêtes en mémoire
         "-duc",
-        "-tags", "cve,misconfig,exposure,tech", # <--- Limite drastiquement les templates chargés
-        "-as",
+        "-tags", "cve,misconfig,exposure", # <--- Limite drastiquement les templates chargés
     ]
 
     start_time = time.time()
